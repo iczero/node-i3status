@@ -28,10 +28,17 @@ class Status extends EventEmitter {
     }) + '\n');
     this.jsonOut.pipe(this.outStream);
     this.inStream.on('data', this.inputHandler.bind(this));
+
+    this._willUpdate = false;
   }
   /** Send the current status to i3bar */
   update() {
-    this.jsonOut.write(this.display);
+    if (this._willUpdate) return;
+    this._willUpdate = true;
+    setImmediate(() => {
+      this.jsonOut.write(this.display);
+      this._willUpdate = false;
+    });
   }
   /** Render all blocks */
   renderAll() {

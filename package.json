@@ -1,6 +1,6 @@
 {
   "name": "node-i3status",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A library for creating status bars similar to i3status",
   "main": "index.js",
   "scripts": {

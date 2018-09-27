@@ -53,6 +53,8 @@ bar {
 }
 ```
 
+See examples folder for examples of more complex blocks.
+
 ## API Reference
 
 ### class: Status

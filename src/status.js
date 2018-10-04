@@ -29,6 +29,10 @@ class Status extends EventEmitter {
     this.jsonOut.pipe(this.outStream);
     this.inStream.on('data', this.inputHandler.bind(this));
 
+    this.inStream.on('error', err => this.emit('error', err));
+    this.outStream.on('error', err => this.emit('error', err));
+    this.jsonOut.on('error', err => this.emit('error', err));
+
     this._willUpdate = false;
   }
   /** Send the current status to i3bar */

@@ -1,10 +1,13 @@
-const { Block } = require('node-i3status');
+const AsyncExpandingBaseBlock = require('./async-expanding-base.js');
 const { systemBus } = require('./dbus.js');
 const { promisify } = require('util');
 const chroma = require('chroma-js');
 
+/** List of used properties */
+const PROPERTIES = ['Percentage', 'TimeToFull', 'TimeToEmpty', 'State', 'Voltage'];
+
 /** A block displaying battery percentages */
-class BatteryBlock extends Block {
+class BatteryBlock extends AsyncExpandingBaseBlock {
   /**
    * The construtor
    * @param {Object} [opts]
@@ -16,51 +19,22 @@ class BatteryBlock extends Block {
    * @param {Object} [opts.blockOptions] Additional options to pass to the block
    */
   constructor(opts) {
-    super('battery');
-    if (!opts) opts = {};
-    opts = Object.assign({
+    super('battery', Object.assign({
       device: 'battery_BAT0',
       updateInterval: 30000,
       expandTimeout: 5000,
       colorScale: ['#ff0000', '#ffff00', '#00ff00'],
-      colorScaleMode: 'lab',
-      blockOptions: {
-        separator_block_width: 15
-      }
-    }, opts);
-    this.opts = opts;
-    this.iface = null;
+      colorScaleMode: 'lab'
+    }, opts));
 
-    this.interval = setInterval(() => this.update(), this.opts.updateInterval);
-    this.expandTimeout = null;
-    this.on('mouse-RIGHT', () => this.updateAndResetInterval());
-    this.on('mouse-LEFT', () => this._setExpanded());
-    this._data = null;
+    this.iface = null;
+    this._promisifiedProperties = {};
     this.colorScale = chroma
     .scale(this.opts.colorScale)
     .mode(this.opts.colorScaleMode)
     .domain([0, 100]);
 
     this._initIface();
-  }
-  /** Update the display and re-set the interval */
-  updateAndResetInterval() {
-    this.update();
-    clearInterval(this.interval);
-    this.interval = setInterval(() => this.update(), this.opts.updateInterval);
-  }
-  /** Open expanded view */
-  _setExpanded() {
-    this.expandedDisplay = true;
-    this.updateAndResetInterval();
-    if (this.expandTimeout) clearTimeout(this.expandTimeout);
-    this.expandTimeout = setTimeout(() => this._closeExpanded(), this.opts.expandTimeout);
-  }
-  /** Close expanded view */
-  _closeExpanded() {
-    this.expandedDisplay = false;
-    this.expandTimeout = null;
-    this.update();
   }
   /** Initialize the dbus connection */
   _initIface() {
@@ -72,7 +46,10 @@ class BatteryBlock extends Block {
       (err, iface) => {
         if (err) return this.emit('error', err);
         this.iface = iface;
-        this.update();
+        for (let property of PROPERTIES) {
+          this._promisifiedProperties[property] = promisify(iface[property]);
+        }
+        this.updateStatistics();
       }
     );
   }
@@ -91,7 +68,7 @@ class BatteryBlock extends Block {
   render() {
     if (!this._data) {
       return this.applyOptions({
-        full_text: 'BAT N/A'
+        full_text: 'BAT  N/A'
       });
     }
     let display = [];
@@ -133,12 +110,13 @@ class BatteryBlock extends Block {
     });
   }
   /** Schedule an update */
-  async update() {
+  async updateStatistics() {
+    if (!this.iface) return;
     this._data = {};
     let promises = [];
-    for (let property of ['Percentage', 'TimeToFull', 'TimeToEmpty', 'State', 'Voltage']) {
+    for (let property of PROPERTIES) {
       promises.push(
-        promisify(this.iface[property])()
+        this._promisifiedProperties[property]()
         .then(a => this._data[property] = a)
         .catch(err => this.emit('error', err))
       );

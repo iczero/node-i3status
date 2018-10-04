@@ -62,7 +62,7 @@ class NetworkBlock extends AsyncExpandingBlockBase {
       this._data.up = false;
       this._data.addresses = [];
       return;
-    }
+    } else this._data.up = true;
     if (!this.opts.ipv4) addresses = addresses.filter(a => a.family !== 'IPv4');
     if (!this.opts.ipv6) addresses = addresses.filter(a => a.family !== 'IPv6');
     this._data.addresses = addresses;
@@ -152,7 +152,7 @@ class NetworkBlock extends AsyncExpandingBlockBase {
           if (v4) shortAddrs.push(v4.address);
           let v6 = addrs.filter(a => a.family === 'IPv6')[0];
           if (v6) shortAddrs.push(v6.address);
-          text.push(this.color(shortAddrs.join(' '), this.opts.ipColor));
+          text.push(this.color(shortAddrs.join('  '), this.opts.ipColor));
         } else text.push(this.color('[no addresses]', '#ff0000'));
         if (wl) {
           let strength = Math.floor(wl[0] / 70 * 100);

@@ -61,6 +61,7 @@ class NetworkBlock extends AsyncExpandingBlockBase {
     if (!addresses) {
       this._data.up = false;
       this._data.addresses = [];
+      this.update();
       return;
     } else this._data.up = true;
     if (!this.opts.ipv4) addresses = addresses.filter(a => a.family !== 'IPv4');
